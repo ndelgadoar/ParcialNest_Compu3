@@ -1,0 +1,93 @@
+# ══════════════════════════════════════════════════════════════
+# .gitignore Formato General
+# ══════════════════════════════════════════════════════════════
+
+# ── Dependencias y compilados ──
+node_modules/
+dist/
+build/
+out/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+.eslintcache
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/install-state.gz
+
+# ── Variables de entorno y secretos (se conserva .env.example) ──
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+secrets/
+credentials.json
+
+# ── Base de datos local y volúmenes de Docker ──
+*.sqlite
+*.sqlite3
+*.db
+pgdata/
+postgres-data/
+docker-compose.override.yml
+
+# ── Logs y temporales ──
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+.temp/
+.tmp/
+tmp/
+*.pid
+*.pid.lock
+*.seed
+report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+
+# ── Basura de sistema operativo (macOS / Windows / Linux) ──
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+__MACOSX/
+Thumbs.db
+ehthumbs.db
+desktop.ini
+$RECYCLE.BIN/
+~$*
+*~
+.Trash-*
+.directory
+
+# ── Editores e IDEs ──
+.idea/
+*.iml
+.project
+.classpath
+.c9/
+*.launch
+.settings/
+*.sublime-workspace
+*.sublime-project
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# ── Pruebas y reportes ──
+junit.xml
+test-results/
+playwright-report/
