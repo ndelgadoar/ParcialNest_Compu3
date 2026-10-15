@@ -2,6 +2,7 @@ import { Body, Controller, Get, Post, Query } from '@nestjs/common';
 import { ApiBadRequestResponse, ApiConflictResponse, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { ProgramService } from './program.service';
 import { CreateProgramDto } from './dto/create-program.dto';
+import { BulkCreateProgramDto } from './dto/bulk-create-program.dto';
 import { PaginationDto } from '../student/dto/pagination.dto';
 import { Program } from './entities/program.entity';
 import { Auth } from '../user/decorators/auth.decorator';
@@ -29,6 +30,16 @@ export class ProgramController {
   @ApiConflictResponse({ description: "Name or code already exists" })
   create(@Body() createProgramDto: CreateProgramDto, @GetUser() user: User){
     return this.programService.create(createProgramDto, user);
+  }
+
+  @Post("bulk")
+  @Auth(ValidRoles.admin)
+  @ApiOperation({ summary: "Create several programs", description: "All or none. Requires the admin role" })
+  @ApiCreatedResponse({ description: "Programs were created", type: [Program] })
+  @ApiBadRequestResponse({ description: "Invalid request body" })
+  @ApiConflictResponse({ description: "A name or code already exists or is repeated in the request" })
+  bulkCreate(@Body() bulkCreateProgramDto: BulkCreateProgramDto, @GetUser() user: User){
+    return this.programService.bulkCreate(bulkCreateProgramDto, user);
   }
 
   @Get()

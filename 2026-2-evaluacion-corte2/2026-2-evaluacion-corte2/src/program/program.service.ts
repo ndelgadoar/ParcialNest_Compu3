@@ -1,8 +1,9 @@
 import { ConflictException, HttpException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Program } from './entities/program.entity';
 import { CreateProgramDto } from './dto/create-program.dto';
+import { BulkCreateProgramDto } from './dto/bulk-create-program.dto';
 import { PaginationDto } from '../student/dto/pagination.dto';
 import { User } from '../user/entities/user.entity';
 
@@ -14,7 +15,8 @@ export class ProgramService {
     // TODO Reto 1: inyecta el repositorio de Program (y lo que necesites para las transacciones)
     constructor(
         @InjectRepository(Program)
-        private readonly programRepository: Repository<Program>
+        private readonly programRepository: Repository<Program>,
+        private readonly datasource: DataSource
     ){}
 
     // TODO Reto 1: create(createProgramDto, user) -> guarda el programa
@@ -55,6 +57,33 @@ export class ProgramService {
 
     // TODO Reto 3: bulkCreate(bulkCreateProgramDto, user) -> crea todos los programas o ninguno
     //   (transacción). Cualquier nombre/código repetido -> 409 y rollback.
+    async bulkCreate(bulkCreateProgramDto: BulkCreateProgramDto, user: User){
+        const { programs } = bulkCreateProgramDto;
+
+        const names = programs.map(program => program.name);
+        const codes = programs.map(program => program.code);
+        if(new Set(names).size !== names.length || new Set(codes).size !== codes.length)
+            throw new ConflictException('Repeated name or code inside the request');
+
+        const queryRunner = this.datasource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try{
+            const newPrograms = programs.map(program => this.programRepository.create({
+                ...program,
+                createdBy: user
+            }));
+            await queryRunner.manager.save(newPrograms);
+            await queryRunner.commitTransaction();
+            return newPrograms;
+        }catch(error){
+            await queryRunner.rollbackTransaction();
+            this.handleException(error);
+        }finally{
+            await queryRunner.release();
+        }
+    }
 
     private handleException(error: any): never{
         if(error instanceof HttpException) throw error;
