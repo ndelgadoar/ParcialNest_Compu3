@@ -1,8 +1,9 @@
-import { Body, Controller, Get, Post, Query } from '@nestjs/common';
-import { ApiBadRequestResponse, ApiConflictResponse, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Patch, Post, Query } from '@nestjs/common';
+import { ApiBadRequestResponse, ApiConflictResponse, ApiCreatedResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiParam, ApiTags } from '@nestjs/swagger';
 import { ProgramService } from './program.service';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { BulkCreateProgramDto } from './dto/bulk-create-program.dto';
+import { AssignStudentsDto } from './dto/assign-students.dto';
 import { PaginationDto } from '../student/dto/pagination.dto';
 import { Program } from './entities/program.entity';
 import { Auth } from '../user/decorators/auth.decorator';
@@ -48,5 +49,26 @@ export class ProgramController {
   @ApiBadRequestResponse({ description: "Invalid pagination params" })
   findAll(@Query() paginationDto: PaginationDto){
     return this.programService.findAll(paginationDto);
+  }
+
+  @Get(":id")
+  @ApiOperation({ summary: "Find a program", description: "Returns the program with its students" })
+  @ApiParam({ name: "id", description: "Program id (UUID)", format: "uuid" })
+  @ApiOkResponse({ description: "Program found", type: Program })
+  @ApiBadRequestResponse({ description: "The id is not a UUID" })
+  @ApiNotFoundResponse({ description: "Program not found" })
+  findOne(@Param("id", ParseUUIDPipe) id: string){
+    return this.programService.findOne(id);
+  }
+
+  @Patch(":id/students")
+  @Auth(ValidRoles.admin)
+  @ApiOperation({ summary: "Add students to a program", description: "Keeps the students already assigned. Requires the admin role" })
+  @ApiParam({ name: "id", description: "Program id (UUID)", format: "uuid" })
+  @ApiOkResponse({ description: "Program with all its students", type: Program })
+  @ApiBadRequestResponse({ description: "Invalid id or request body" })
+  @ApiNotFoundResponse({ description: "Program or some student not found" })
+  assignStudents(@Param("id", ParseUUIDPipe) id: string, @Body() assignStudentsDto: AssignStudentsDto){
+    return this.programService.assignStudents(id, assignStudentsDto);
   }
 }

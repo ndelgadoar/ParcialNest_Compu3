@@ -1,10 +1,12 @@
-import { ConflictException, HttpException, Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { ConflictException, HttpException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, In, Repository } from 'typeorm';
 import { Program } from './entities/program.entity';
 import { CreateProgramDto } from './dto/create-program.dto';
 import { BulkCreateProgramDto } from './dto/bulk-create-program.dto';
+import { AssignStudentsDto } from './dto/assign-students.dto';
 import { PaginationDto } from '../student/dto/pagination.dto';
+import { Student } from '../student/entities/student.entity';
 import { User } from '../user/entities/user.entity';
 
 @Injectable()
@@ -48,12 +50,59 @@ export class ProgramService {
     }
 
     // TODO Reto 2: findOne(id) -> programa con sus estudiantes, 404 si no existe
+    async findOne(id: string){
+        const program = await this.programRepository.findOne({
+            where: { id },
+            relations: { students: true }
+        });
+
+        if(!program) throw new NotFoundException(`Program with id ${id} not found`);
+
+        return program;
+    }
 
     // TODO Reto 2: assignStudents(id, assignStudentsDto) -> AGREGA estudiantes al programa
     //   dentro de una transacción (QueryRunner), conservando los que ya tenía.
     //   Mismo patrón del update de estudiantes corregido en clase (combinar las notas):
     //   traer los actuales -> combinar con los nuevos -> guardar la lista completa.
     //   Si algún id no existe: 404 y rollback.
+    async assignStudents(id: string, assignStudentsDto: AssignStudentsDto){
+        const studentIds = [...new Set(assignStudentsDto.studentIds)];
+
+        const queryRunner = this.datasource.createQueryRunner();
+        await queryRunner.connect();
+        await queryRunner.startTransaction();
+
+        try{
+            const program = await queryRunner.manager.findOne(Program, {
+                where: { id },
+                relations: { students: true }
+            });
+            if(!program) throw new NotFoundException(`Program with id ${id} not found`);
+
+            const students = await queryRunner.manager.findBy(Student, { id: In(studentIds) });
+            if(students.length !== studentIds.length){
+                const foundIds = students.map(student => student.id);
+                const missingIds = studentIds.filter(studentId => !foundIds.includes(studentId));
+                throw new NotFoundException(`Students not found: ${missingIds.join(", ")}`);
+            }
+
+            const currentStudents = program.students ?? [];
+            const currentIds = currentStudents.map(student => student.id);
+            const newStudents = students.filter(student => !currentIds.includes(student.id));
+            program.students = [...currentStudents, ...newStudents];
+
+            await queryRunner.manager.save(program);
+            await queryRunner.commitTransaction();
+        }catch(error){
+            await queryRunner.rollbackTransaction();
+            this.handleException(error);
+        }finally{
+            await queryRunner.release();
+        }
+
+        return this.findOne(id);
+    }
 
     // TODO Reto 3: bulkCreate(bulkCreateProgramDto, user) -> crea todos los programas o ninguno
     //   (transacción). Cualquier nombre/código repetido -> 409 y rollback.

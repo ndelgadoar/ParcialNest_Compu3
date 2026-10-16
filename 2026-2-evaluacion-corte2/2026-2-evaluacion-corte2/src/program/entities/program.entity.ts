@@ -1,6 +1,7 @@
-import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { ApiProperty } from "@nestjs/swagger";
 import { User } from "../../user/entities/user.entity";
+import { Student } from "../../student/entities/student.entity";
 
 // TODO Reto 1: convierte esta clase en una entidad de TypeORM (tabla "program") con:
 //   - id: UUID generado automáticamente
@@ -36,6 +37,12 @@ export class Program {
     @ApiProperty({ example: 160 })
     @Column("int")
     credits: number;
+
+    @OneToMany(
+        () => Student,
+        (student) => student.program
+    )
+    students?: Student[];
 
     @ManyToOne(
         () => User,
